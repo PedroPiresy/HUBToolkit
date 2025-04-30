@@ -1,52 +1,54 @@
 pipeline {
-    agent any
-    
+    agent {
+        docker {
+            image 'debian:12'  // Usando a imagem oficial do Debian 12
+            args '-u root'  // Permite a execução de comandos como root
+        }
+    }
+
     triggers {
         githubPush() // Dispara o build quando houver push no GitHub
     }
-    
+
     environment {
-        // Define a variável DOCKER_IMAGE_NAME com o nome da imagem Docker
-        DOCKER_IMAGE_NAME = 'hubtoolkit-image'
+        REPO_URL = 'https://github.com/SamSepi0l13/HUBToolkit.git'
     }
 
     stages {
+        stage('Install Dependencies') {
+            steps {
+                // Atualiza o repositório e instala curl e git no Debian 12
+                sh '''
+                    apt-get update
+                    apt-get install -y curl git
+                '''
+            }
+        }
+
         stage('Clone Repository') {
             steps {
-                // Clona o repositório
-                git 'https://github.com/SamSepi0l13/HUBToolkit.git'
+                // Clona o repositório HUBToolkit
+                sh '''
+                    git clone ${REPO_URL}
+                '''
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Run Scripts') {
             steps {
-                script {
-                    // Construa a imagem Docker a partir do Dockerfile
-                    docker.build(DOCKER_IMAGE_NAME)
-                }
-            }
-        }
-
-        stage('Run Docker Container') {
-            steps {
-                script {
-                    // Roda o container a partir da imagem construída e executa o script necessário
-                    docker.image(DOCKER_IMAGE_NAME).inside {
-                        // Aqui você pode executar os scripts dentro do container
-                        sh '''
-                            chmod +x HUBToolkit/*.sh
-                            ./HUBToolkit/some_script.sh  # Substitua pelo nome do script principal
-                        '''
-                    }
-                }
+                // Executa os scripts do repositório (modifique conforme necessário)
+                sh '''
+                    cd HUBToolkit
+                    chmod +x *.sh
+                    ./some_script.sh  # Substitua por um script válido dentro do repositório
+                '''
             }
         }
     }
 
     post {
         always {
-            // Aqui você pode adicionar ações pós-execução, como limpar imagens
-            echo 'Build Finalizado!'
+            echo 'Pipeline Finalizado!'
         }
     }
 }
